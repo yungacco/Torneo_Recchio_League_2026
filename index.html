@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Recchio League 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #ffffff;       /* Colore accento principale (Bianco per bottoni, tab attive, punteggi) */
+    --green-dark: #e0e0e0;  /* Variante accento (Grigio chiaro per stati hover/attivi) */
+    --bg: #000000;          /* Sfondo generale (Nero puro) */
+    --surface: #121212;     /* Sfondi intermedi (Grigio scurissimo per liste/navigazione) */
+    --card: #1e1e1e;        /* Sfondo schede partite e tabelle (Grigio scuro) */
+    --border: #333333;      /* Linee di divisione e bordi (Grigio medio) */
+    --text: #ffffff;        /* Testo principale (Bianco puro) */
+    --muted: #aaaaaa;       /* Testi secondari e orari (Grigio tenue) */
+    --red: #ff5252;         /* Manteniamo Rosso per Badge LIVE (funzionale) */
+    --yellow: #ffd740;      /* Manteniamo Giallo per NOTE e Fasi Finali (funzionale) */
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; max-width: 480px; margin: 0 auto; overflow-x: hidden; }
+
+  .header { background: var(--surface); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); }
+  .header-spacer { width: 40px; } 
+  .header-logo { height: 45px; max-width: 200px; object-fit: contain; }
+  .auth-btn { background: var(--card); border: 1px solid var(--border); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; transition: 0.2s; }
+  
+  .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 78px; z-index: 99; }
+  .tab { flex: 1; text-align: center; padding: 12px 5px; font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1px; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; transition: 0.2s; }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  .screen { display: none; padding: 0 20px 20px 20px; }
+  .screen.active { display: block; }
+  
+  .day-nav { display: flex; align-items: center; justify-content: space-between; margin: 20px 0; background: var(--surface); padding: 10px; border-radius: 12px; border: 1px solid var(--border); }
+  .nav-arrow { background: var(--card); border: 1px solid var(--green); color: var(--green); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; font-size: 18px; user-select: none; transition: 0.2s;}
+  .nav-arrow:active { transform: scale(0.9); }
+  .nav-arrow.disabled { opacity: 0.2; border-color: var(--muted); color: var(--muted); pointer-events: none; }
+  .header-date { font-size: 18px; color: var(--text); font-weight: bold; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; text-align: center; flex: 1;}
+
+  .section-title { font-size: 14px; font-weight: 600; color: var(--green); margin-top: 25px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;}
+  
+  .match-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 14px; position: relative; }
+  .match-card.done { border-color: var(--border); opacity: 0.8; }
+  .match-time { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;}
+  .teams-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .team-name { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 1px; flex: 1; }
+  .team-name.right { text-align: right; }
+  .vs-badge { background: var(--border); color: var(--muted); font-family: 'Bebas Neue', sans-serif; padding: 4px 10px; border-radius: 6px; }
+  .score-badge { background: var(--green); color: #000; font-family: 'Bebas Neue', sans-serif; font-size: 18px; padding: 4px 12px; border-radius: 6px; }
+  
+  /* ANIMAZIONE BADGE LIVE */
+  .live-badge { background: var(--red); color: #fff; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 4px; animation: pulse 1.5s infinite; letter-spacing: 0.5px; }
+  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+  .scorers-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 10px; gap: 15px; line-height: 1.6; }
+  .scorer-left { text-align: left; flex: 1; }
+  .scorer-right { text-align: right; flex: 1; }
+  .match-note { font-size: 11px; color: var(--yellow); margin-top: 12px; text-align: center; font-style: italic; background: rgba(255, 215, 64, 0.1); padding: 6px; border-radius: 6px;}
+
+  .edit-btn { display: inline-block; background: #1e2e1e; color: var(--green); font-size: 11px; font-weight: 600; padding: 8px 12px; border-radius: 6px; margin-top: 15px; cursor: pointer; border: 1px solid var(--green); text-align: center; width: 100%; text-transform: uppercase;}
+  
+  .girone-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 15px; margin-bottom: 20px; }
+  .girone-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--green); letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px;}
+  
+  .table-container { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 10px;}
+  table { width: 100%; border-collapse: collapse; text-align: center; }
+  th { background: #151d15; color: var(--muted); font-size: 11px; font-weight: 600; padding: 12px 8px; border-bottom: 1px solid var(--border); }
+  th:first-child, td:first-child { text-align: left; padding-left: 15px; }
+  td { padding: 12px 8px; font-size: 14px; border-bottom: 1px solid #1a241a; }
+  tr:last-child td { border-bottom: none; }
+  .pt { font-weight: bold; color: var(--green); font-size: 16px; }
+
+  .history-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--muted); border-radius: 8px; padding: 12px; margin-bottom: 10px;}
+  .history-date { font-size: 10px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between;}
+  .history-score { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--text); }
+
+  .input-group { margin-bottom: 14px; }
+  .input-group label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  input[type="number"], textarea, select { width: 100%; background: #0d150d; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; appearance: none; cursor: pointer; }
+  input[type="number"]:focus, textarea:focus, select:focus { border-color: var(--green); }
+  textarea { resize: none; min-height: 70px; }
+  
+  .btn { width: 100%; padding: 15px; border: none; border-radius: 12px; font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 20px;}
+  .btn-primary { background: var(--green); color: #000; }
+  .back-btn { color: var(--muted); font-size: 14px; cursor: pointer; margin-top: 20px; margin-bottom: 20px; display: inline-block; }
+  .score-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .score-row .team-label { flex: 1; text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .score-input { width: 70px !important; text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 36px !important; padding: 10px 8px !important; }
+
+  .loading { display: flex; flex-direction: column; align-items: center; min-height: 200px; color: var(--muted); padding-top: 50px; }
+  .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px;}
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--green); color: #000; padding: 12px 24px; border-radius: 100px; font-weight: 600; font-size: 14px; transition: transform 0.3s; z-index: 999; }
+  .toast.error { background: var(--red); color: #fff; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-spacer"></div>
+  <img src="">
+  <div class="auth-btn" id="lockBtn" onclick="toggleAuth()">🔒</div>
+</div>
+
+<div class="tabs" id="mainTabs">
+  <div class="tab active" id="tab-partite" onclick="switchTab('homeScreen')">⚽ PARTITE</div>
+  <div class="tab" id="tab-classifica" onclick="switchTab('classificaScreen')">🏆 CLASSIFICHE</div>
+  <div class="tab" id="tab-marcatori" onclick="switchTab('marcatoriScreen')">👟 MARCATORI</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="screen active" id="homeScreen">
+  <div class="day-nav" id="dayNav" style="display:none;">
+    <div class="nav-arrow" id="prevArrow" onclick="changeDay(-1)">◀</div>
+    <div class="header-date" id="headerDate">CARICAMENTO...</div>
+    <div class="nav-arrow" id="nextArrow" onclick="changeDay(1)">▶</div>
+  </div>
+  <div id="matchesList"></div>
+</div>
+
+<div class="screen" id="classificaScreen">
+  <div class="section-title">Classifiche Gironi</div>
+  <div id="gironiContainer"></div>
+  <div class="section-title" style="margin-top:30px; color:var(--yellow);">Fase Finale</div>
+  <div id="knockoutContainer"></div>
+  <div class="section-title" style="margin-top:30px;">Storico Partite</div>
+  <div id="historyList"></div>
+</div>
+
+<div class="screen" id="marcatoriScreen">
+  <div class="section-title">Classifica Marcatori</div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Giocatore</th>
+          <th>⚽ GOL</th>
+        </tr>
+      </thead>
+      <tbody id="marcatoriBody">
+        </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="screen" id="resultScreen">
+  <div class="back-btn" onclick="switchTab('homeScreen')">← Annulla e torna indietro</div>
+
+  <div class="section-title" style="text-align:center; font-size:22px; color:var(--green);" id="resultTeams"></div>
+  <div style="text-align:center; font-size:12px; color:var(--muted); margin-bottom:20px;" id="resultOrario"></div>
+
+  <div class="input-group">
+    <label>STATO PARTITA</label>
+    <select id="matchStatus">
+      <option value="">🕒 Da Giocare</option>
+      <option value="LIVE">🔴 In Corso (LIVE)</option>
+      <option value="TERMINATA">✅ Terminata</option>
+    </select>
+  </div>
+
+  <div class="score-row">
+    <div class="team-label" id="scoreTeamA">SQ A</div>
+    <input type="number" class="score-input" id="scoreA" min="0" max="99" inputmode="numeric">
+    <div style="font-family: 'Bebas Neue'; font-size: 36px; color: var(--muted);">-</div>
+    <input type="number" class="score-input" id="scoreB" min="0" max="99" inputmode="numeric">
+    <div class="team-label" id="scoreTeamB">SQ B</div>
+  </div>
+
+  <div class="input-group">
+    <label id="marcatoriLabelA">MARCATORI A (uno per riga, es. Mario x2)</label>
+    <textarea id="marcatoriA"></textarea>
+  </div>
+  <div class="input-group">
+    <label id="marcatoriLabelB">MARCATORI B (uno per riga, es. Mario x2)</label>
+    <textarea id="marcatoriB"></textarea>
+  </div>
+  <div class="input-group">
+    <label>NOTE (Cartellini, vittoria ai rigori, infortuni...)</label>
+    <textarea id="notePartita"></textarea>
+  </div>
+
+  <button class="btn btn-primary" onclick="submitResult()" id="submitBtn">📤 SALVA RISULTATO</button>
+</div>
+
+<script>
+// ==========================================
+// IMPORTANTE: INSERISCI QUI IL LINK DEL TUO SCRIPT GOOGLE!
+const API_URL = "https://script.google.com/macros/s/AKfycbxnlj1Hdg_d0xgmLVxUr8EWcqKokhB2ltSbUy3ANWcikFbM2Q11SaDHBQgGCF4hgVI/exec";
+// ==========================================
+
+let allMatches = [];      
+let uniqueDates = [];     
+let currentDateIndex = 0; 
+let matches = [];         
+let currentMatch = null;
+let adminPin = sessionStorage.getItem('adminPin') || null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateAuthIcon();
+  loadAllMatches(); 
+  setupSwipe();
+});
+
+function formatMarcatori(text, side) {
+  if (!text) return '';
+  return text.split('\n')
+             .filter(line => line.trim() !== '')
+             .map(line => side === 'A' ? `⚽ ${line.trim()}` : `${line.trim()} ⚽`)
+             .join('<br>');
+}
+
+function setupSwipe() {
+  const swipeZone = document.getElementById('homeScreen');
+  let touchstartX = 0; let touchendX = 0;
+  swipeZone.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, {passive: true});
+  swipeZone.addEventListener('touchend', e => {
+    touchendX = e.changedTouches[0].screenX;
+    const threshold = 50; 
+    if (document.getElementById('homeScreen').classList.contains('active')) {
+      if (touchendX < touchstartX - threshold) changeDay(1); 
+      if (touchendX > touchstartX + threshold) changeDay(-1); 
+    }
+  }, {passive: true});
+}
+
+function toggleAuth() {
+  if (adminPin) {
+    if(confirm("Vuoi uscire dalla modalità Admin?")) {
+      adminPin = null; sessionStorage.removeItem('adminPin');
+      updateAuthIcon(); renderCurrentDay(); showToast("Sei uscito dalla modalità Admin");
+    }
+  } else {
+    let pin = prompt("Inserisci il PIN per gestire i risultati:");
+    if (!pin) return;
+    
+    fetch(API_URL + "?action=verifyPin&pin=" + encodeURIComponent(pin))
+      .then(res => res.json())
+      .then(data => {
+        if(data.success) {
+          adminPin = pin; sessionStorage.setItem('adminPin', pin);
+          updateAuthIcon(); renderCurrentDay(); showToast("Modalità Admin attivata!");
+        } else {
+          showToast("PIN Errato!", true);
+        }
+      })
+      .catch(() => showToast("Errore di verifica", true));
+  }
+}
+
+function updateAuthIcon() {
+  const btn = document.getElementById('lockBtn');
+  if (adminPin) { btn.innerText = "🔓"; btn.style.borderColor = "var(--green)"; btn.style.color = "var(--green)"; } 
+  else { btn.innerText = "🔒"; btn.style.borderColor = "var(--border)"; btn.style.color = "var(--text)"; }
+}
+
+function switchTab(screenId) {
+  if(['homeScreen', 'classificaScreen', 'marcatoriScreen'].includes(screenId)) {
+    document.getElementById('mainTabs').style.display = 'flex';
+    document.getElementById('tab-partite').classList.remove('active');
+    document.getElementById('tab-classifica').classList.remove('active');
+    document.getElementById('tab-marcatori').classList.remove('active');
+    
+    if(screenId === 'homeScreen') { 
+      document.getElementById('tab-partite').classList.add('active'); 
+      renderCurrentDay(); 
+    } else if (screenId === 'classificaScreen') { 
+      document.getElementById('tab-classifica').classList.add('active'); 
+      loadStandings(); 
+    } else if (screenId === 'marcatoriScreen') {
+      document.getElementById('tab-marcatori').classList.add('active'); 
+      renderMarcatoriClassifica(); 
+    }
+  } else { 
+    document.getElementById('mainTabs').style.display = 'none'; 
+  }
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function loadAllMatches() {
+  document.getElementById('dayNav').style.display = 'none';
+  document.getElementById('matchesList').innerHTML = `<div class="loading"><div class="spinner"></div>Recupero calendario...</div>`;
+  
+  fetch(API_URL + "?action=getAllMatches")
+    .then(response => {
+       if (!response.ok) throw new Error("Errore di rete");
+       return response.json();
+    })
+    .then(data => {
+      if(data.success) { allMatches = data.matches; processDates(); } 
+      else document.getElementById('matchesList').innerHTML = `<div style="text-align:center; padding:20px; color:var(--red);">Errore: ${data.errorMsg}</div>`;
+    })
+    .catch(err => {
+       document.getElementById('matchesList').innerHTML = `<div style="text-align:center; padding:20px; color:var(--red);">Impossibile connettersi al Database.<br><br>Assicurati di aver fatto <b>"Nuova Distribuzione"</b> su Google Script!</div>`;
+       showToast("Errore server", true);
+    });
+}
+
+function processDates() {
+  let datesSet = new Set(allMatches.map(m => m.date ? m.date.toString().trim() : "").filter(d => d !== ""));
+  uniqueDates = Array.from(datesSet);
+  
+  uniqueDates.sort((a, b) => {
+    let strA = a.toString(); let strB = b.toString();
+    let partsA = strA.includes('/') ? strA.split('/') : strA.split('-');
+    let partsB = strB.includes('/') ? strB.split('/') : strB.split('-');
+    if(partsA.length < 2) return 1; if(partsB.length < 2) return -1;
+
+    let dA = parseInt(partsA[0]) || 0; let mA = parseInt(partsA[1]) || 0; let yA = partsA[2] ? parseInt(partsA[2]) : new Date().getFullYear();
+    let dB = parseInt(partsB[0]) || 0; let mB = parseInt(partsB[1]) || 0; let yB = partsB[2] ? parseInt(partsB[2]) : new Date().getFullYear();
+    return new Date(yA, mA-1, dA) - new Date(yB, mB-1, dB);
+  });
+
+  if (uniqueDates.length === 0) {
+    document.getElementById('matchesList').innerHTML = `<div style="text-align:center; padding:40px 20px; color:var(--muted);">Il calendario non è ancora disponibile.</div>`;
+    return;
+  }
+
+  let now = new Date(); now.setHours(0,0,0,0);
+  let nextIdx = uniqueDates.findIndex(d => {
+    let parts = d.toString().includes('/') ? d.toString().split('/') : d.toString().split('-');
+    if(parts.length < 2) return true; 
+    let y = parts[2] ? parseInt(parts[2]) : now.getFullYear();
+    return new Date(y, parseInt(parts[1])-1, parseInt(parts[0])) >= now;
+  });
+
+  currentDateIndex = nextIdx !== -1 ? nextIdx : uniqueDates.length - 1;
+  document.getElementById('dayNav').style.display = 'flex';
+  renderCurrentDay();
+}
+
+function formatDisplayDate(dateStr) {
+  if(!dateStr) return "DATA TBD";
+  let parts = dateStr.toString().includes('/') ? dateStr.toString().split('/') : dateStr.toString().split('-');
+  if (parts.length < 2) return dateStr.toString();
+  let y = parts[2] ? parseInt(parts[2]) : new Date().getFullYear();
+  return new Date(y, parseInt(parts[1])-1, parseInt(parts[0])).toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase();
+}
+
+function changeDay(offset) {
+  let newIdx = currentDateIndex + offset;
+  if (newIdx >= 0 && newIdx < uniqueDates.length) { currentDateIndex = newIdx; renderCurrentDay(); }
+}
+
+function renderCurrentDay() {
+  if (uniqueDates.length === 0) return;
+
+  const targetDateStr = uniqueDates[currentDateIndex];
+  document.getElementById('headerDate').textContent = formatDisplayDate(targetDateStr);
+  document.getElementById('prevArrow').classList.toggle('disabled', currentDateIndex === 0);
+  document.getElementById('nextArrow').classList.toggle('disabled', currentDateIndex === uniqueDates.length - 1);
+
+  matches = allMatches.filter(m => m.date === targetDateStr);
+  const list = document.getElementById('matchesList');
+  
+  if (matches.length === 0) { list.innerHTML = `<div style="text-align:center; padding:40px 20px; color:var(--muted);">Nessuna partita programmata.</div>`; return; }
+
+  list.innerHTML = matches.map((m, i) => {
+    const hasScore = (m.golA !== "" && m.golB !== ""); 
+    const isTerminata = (m.status === 'TERMINATA');
+    const isLive = (m.status === 'LIVE');
+
+    let isGroup = ['A', 'B', 'C', 'D'].includes(m.girone);
+    let badgeText = isGroup ? `GIRONE ${m.girone}` : m.girone;
+    let badgeColor = isGroup ? "var(--green)" : "var(--yellow)";
+    let badgeBorder = isGroup ? "var(--border)" : "var(--yellow)";
+    let gironeBadge = `<span style="background:var(--surface); border:1px solid ${badgeBorder}; font-size:10px; padding:3px 8px; border-radius:4px; color:${badgeColor}; font-weight:bold;">${badgeText}</span>`;
+    
+    // Mostra l'orario o lo stato
+    let timeDisplay = `<span>🕒 ${m.orario || 'TBD'}</span>`;
+    if (isLive) timeDisplay = `<span class="live-badge">🔴 LIVE</span>`;
+    else if (isTerminata) timeDisplay = `<span style="color:var(--muted);">✅ Finita</span>`;
+
+    let scorersHtml = '';
+    if (hasScore && (m.marcatoriA || m.marcatoriB)) {
+      scorersHtml = `
+      <div class="scorers-row">
+        <div class="scorer-left">${formatMarcatori(m.marcatoriA, 'A')}</div>
+        <div class="scorer-right">${formatMarcatori(m.marcatoriB, 'B')}</div>
+      </div>`;
+    }
+
+    let noteHtml = (hasScore && m.note) ? `<div class="match-note">📌 ${m.note.replace(/\n/g, '<br>')}</div>` : '';
+    let editHtml = adminPin ? `<div class="edit-btn" onclick="openMatch(${i})">✏️ Inserisci/Modifica Risultato</div>` : '';
+
+    return `
+    <div class="match-card ${isTerminata ? 'done' : ''}">
+      <div class="match-time">${gironeBadge}${timeDisplay}</div>
+      <div class="teams-row">
+        <div class="team-name">${m.squadraA}</div>
+        ${hasScore ? `<div class="score-badge">${m.golA} - ${m.golB}</div>` : `<div class="vs-badge">VS</div>`}
+        <div class="team-name right">${m.squadraB}</div>
+      </div>
+      ${scorersHtml}${noteHtml}${editHtml}
+    </div>`;
+  }).join('');
+}
+
+function loadStandings() {
+  document.getElementById('gironiContainer').innerHTML = `<div style="text-align:center; padding:20px;"><div class="spinner" style="margin: 0 auto;"></div></div>`;
+  document.getElementById('historyList').innerHTML = '';
+  renderFaseFinale();
+
+  fetch(API_URL + "?action=getStandingsAndHistory")
+    .then(response => response.json())
+    .then(data => {
+      if(data.success) { renderGironi(data.classifiche); renderHistory(data.history); } 
+      else showToast("Errore calcolo classifiche", true);
+    })
+    .catch(err => showToast("Errore di connessione", true));
+}
+
+function renderGironi(classifiche) {
+  const container = document.getElementById('gironiContainer');
+  container.innerHTML = '';
+  ['A', 'B', 'C', 'D'].forEach(girone => {
+    let list = classifiche[girone] || [];
+    let tableRows = list.length === 0 ? `<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:15px;">Nessuna squadra nel Girone ${girone}</td></tr>` 
+      : list.map((t, idx) => `<tr><td style="font-weight:600;">${idx + 1}. ${t.nome}</td><td class="pt">${t.punti}</td><td>${t.giocate}</td><td>${t.vinte}</td><td>${t.pareggiate}</td><td>${t.perse}</td></tr>`).join('');
+    container.innerHTML += `<div class="girone-box"><div class="girone-title">Girone ${girone}</div><div class="table-container"><table><thead><tr><th>Squadra</th><th>PT</th><th>G</th><th>V</th><th>P</th><th>S</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
+  });
+}
+
+function renderFaseFinale() {
+  const container = document.getElementById('knockoutContainer');
+  let koMatches = allMatches.filter(m => !['A', 'B', 'C', 'D'].includes(m.girone));
+  if(koMatches.length === 0) { container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--muted); font-size:12px;">Tabellone in attesa di definizione.</div>`; return; }
+
+  let stages = {};
+  koMatches.forEach(m => { if(!stages[m.girone]) stages[m.girone] = []; stages[m.girone].push(m); });
+  let order = ["OTTAVI", "QUARTI", "SEMIFINALE", "SEMIFINALI", "FINALE 3/4", "FINALE"];
+  let stageKeys = Object.keys(stages).sort((a,b) => {
+    let idxA = order.indexOf(a); let idxB = order.indexOf(b);
+    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+  });
+
+  let html = '';
+  stageKeys.forEach(stage => {
+    html += `<div class="girone-title" style="color:var(--yellow); border-bottom-color:var(--yellow); margin-top:20px; font-size:18px;">${stage}</div>`;
+    stages[stage].forEach(m => {
+      let hasScore = (m.golA !== "" && m.golB !== "");
+      let isLive = (m.status === 'LIVE');
+      
+      let badgeLive = isLive ? `<span class="live-badge" style="margin-left:8px;">LIVE</span>` : '';
+      
+      let scorersHtml = (hasScore && (m.marcatoriA || m.marcatoriB)) ? `<div class="scorers-row" style="margin-top:8px;"><div class="scorer-left">${formatMarcatori(m.marcatoriA, 'A')}</div><div class="scorer-right">${formatMarcatori(m.marcatoriB, 'B')}</div></div>` : '';
+      let noteHtml = (hasScore && m.note) ? `<div class="match-note" style="margin-top:8px;">📌 ${m.note.replace(/\n/g, '<br>')}</div>` : '';
+      html += `<div class="history-card" style="border-left-color:var(--yellow); margin-bottom:10px;"><div class="history-date"><span>${m.date || 'TBD'} - Ore ${m.orario || 'TBD'}</span>${badgeLive}</div><div class="history-score">${m.squadraA} <span style="color:var(--yellow); margin:0 5px;">${hasScore ? m.golA + ' - ' + m.golB : 'VS'}</span> ${m.squadraB}</div>${scorersHtml}${noteHtml}</div>`;
+    });
+  });
+  container.innerHTML = html;
+}
+
+function renderHistory(history) {
+  const list = document.getElementById('historyList');
+  if(history.length === 0) { list.innerHTML = `<div style="text-align:center; font-size:12px; color:var(--muted);">Nessuna partita giocata.</div>`; return; }
+  list.innerHTML = history.map(h => {
+    let badgeStr = ['A', 'B', 'C', 'D'].includes(h.girone) ? `Girone ${h.girone}` : `${h.girone}`;
+    let isLive = h.status === 'LIVE';
+    let badgeLive = isLive ? `<span class="live-badge">LIVE</span>` : '';
+    
+    let scorersHtml = (h.marcA || h.marcB) ? `<div class="scorers-row" style="margin-top:8px;"><div class="scorer-left">${formatMarcatori(h.marcA, 'A')}</div><div class="scorer-right">${formatMarcatori(h.marcB, 'B')}</div></div>` : '';
+    let noteHtml = h.note ? `<div class="match-note" style="margin-top:8px;">📌 ${h.note.replace(/\n/g, '<br>')}</div>` : '';
+    return `<div class="history-card"><div class="history-date"><span>${badgeStr} | ${h.data} - Ore ${h.orario}</span>${badgeLive}</div><div class="history-score">${h.sqA} <span style="color:var(--green); margin:0 5px;">${h.gA} - ${h.gB}</span> ${h.sqB}</div>${scorersHtml}${noteHtml}</div>`;
+  }).join('');
+}
+
+function renderMarcatoriClassifica() {
+  let scorerCounts = {};
+
+  allMatches.forEach(m => {
+    if (m.golA !== "" && m.golB !== "") {
+      let mA = m.marcatoriA ? m.marcatoriA.split('\n') : [];
+      let mB = m.marcatoriB ? m.marcatoriB.split('\n') : [];
+      let allScorers = mA.concat(mB);
+
+      allScorers.forEach(entry => {
+        entry = entry.trim();
+        if (entry !== "") {
+          // Utilizza un'espressione regolare per separare il nome dall'eventuale moltiplicatore (es. "x2" o "X 3")
+          let match = entry.match(/^(.*?)(?:\s*[xX*]\s*(\d+))?$/);
+          let name = match[1].trim();
+          let count = match[2] ? parseInt(match[2], 10) : 1;
+
+          if (name !== "") {
+            let normalized = name.toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+            
+            if (!scorerCounts[normalized]) {
+              scorerCounts[normalized] = 0;
+            }
+            scorerCounts[normalized] += count;
+          }
+        }
+      });
+    }
+  });
+
+  let scorersArray = Object.keys(scorerCounts).map(name => {
+    return { nome: name, gol: scorerCounts[name] };
+  });
+  scorersArray.sort((a, b) => b.gol - a.gol || a.nome.localeCompare(b.nome));
+
+  const tbody = document.getElementById('marcatoriBody');
+  if (scorersArray.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; color:var(--muted); padding:15px;">Nessun gol segnato finora</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = scorersArray.map((s, idx) => `
+    <tr>
+      <td style="font-weight:600;">${idx + 1}. ${s.nome}</td>
+      <td class="pt">${s.gol}</td>
+    </tr>
+  `).join('');
+}
+
+function openMatch(index) {
+  currentMatch = matches[index];
+  let turnoTesto = ['A', 'B', 'C', 'D'].includes(currentMatch.girone) ? `Girone ${currentMatch.girone}` : currentMatch.girone;
+  
+  document.getElementById('resultTeams').textContent = `${currentMatch.squadraA} VS ${currentMatch.squadraB}`;
+  document.getElementById('resultOrario').textContent = `${turnoTesto} - ${currentMatch.date || 'TBD'} - Ore ${currentMatch.orario || 'TBD'}`;
+  document.getElementById('scoreTeamA').textContent = currentMatch.squadraA; document.getElementById('scoreTeamB').textContent = currentMatch.squadraB;
+  
+  document.getElementById('matchStatus').value = currentMatch.status || '';
+  document.getElementById('scoreA').value = currentMatch.golA !== "" ? currentMatch.golA : 0;
+  document.getElementById('scoreB').value = currentMatch.golB !== "" ? currentMatch.golB : 0;
+  document.getElementById('marcatoriA').value = currentMatch.marcatoriA || ''; document.getElementById('marcatoriB').value = currentMatch.marcatoriB || '';
+  document.getElementById('notePartita').value = currentMatch.note || '';
+  
+  switchTab('resultScreen');
+}
+
+function submitResult() {
+  const btn = document.getElementById('submitBtn'); btn.disabled = true; btn.textContent = '⏳ Salvataggio...';
+  
+  const payload = {
+    id: currentMatch.id, 
+    pin: adminPin, 
+    status: document.getElementById('matchStatus').value,
+    golA: document.getElementById('scoreA').value, 
+    golB: document.getElementById('scoreB').value,
+    marcatoriA: document.getElementById('marcatoriA').value.trim(), 
+    marcatoriB: document.getElementById('marcatoriB').value.trim(), 
+    note: document.getElementById('notePartita').value.trim()
+  };
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    btn.disabled = false; btn.textContent = '📤 SALVA RISULTATO';
+    if(data.success) { showToast("Risultato salvato!"); loadAllMatches(); switchTab('homeScreen'); } 
+    else showToast('❌ Errore: ' + data.errorMsg, true);
+  })
+  .catch(err => {
+    btn.disabled = false; btn.textContent = '📤 SALVA RISULTATO'; showToast('❌ Errore di connessione', true);
+  });
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.className = `toast ${isError ? 'error' : ''} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
