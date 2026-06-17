@@ -103,7 +103,7 @@
 
 <div class="header">
   <div class="header-spacer"></div>
-  <img src="https://raw.githubusercontent.com/yungacco/Torneo_Recchio_League_2026/refs/heads/main/RECCHIO_PNG.png">
+  <img src="https://raw.githubusercontent.com/yungacco/Torneo_Recchio_League_2026/refs/heads/main/RECCHIO_PNG.png" alt="Logo Torneo" class="header-logo">
   <div class="auth-btn" id="lockBtn" onclick="toggleAuth()">🔒</div>
 </div>
 
@@ -485,7 +485,6 @@ function renderMarcatoriClassifica() {
       allScorers.forEach(entry => {
         entry = entry.trim();
         if (entry !== "") {
-          // Utilizza un'espressione regolare per separare il nome dall'eventuale moltiplicatore (es. "x2" o "X 3")
           let match = entry.match(/^(.*?)(?:\s*[xX*]\s*(\d+))?$/);
           let name = match[1].trim();
           let count = match[2] ? parseInt(match[2], 10) : 1;
