@@ -7,35 +7,33 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --green: #d32f2f;       /* Rosso sportivo */
-    --surface: #141417;     /* Sfondo scuro */
-    --border: #2c2c35;      /* Bordi */
-    --text: #ffffff;        /* Testo */
-    --red: #ff1744;         /* Badge LIVE */
+    --green: #d32f2f;
+    --surface: #141417;
+    --border: #2c2c35;
+    --text: #ffffff;
+    --red: #ff1744;
   }
 
-  /* Sfondo trasparente per OBS */
   body {
-    margin: 0;
-    padding: 0;
-    background-color: transparent; 
+    margin: 0; padding: 0;
+    background-color: transparent !important; 
     font-family: 'DM Sans', sans-serif;
     color: var(--text);
     display: flex;
     justify-content: center;
-    padding-top: 40px; /* Distanza dal bordo superiore */
+    padding-top: 40px; 
     overflow: hidden;
   }
 
-  /* Contenitore principale del tabellone */
   #scoreboard-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    opacity: 0; /* Nascosto di default, appare se c'è una partita LIVE */
+    opacity: 0;
     transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
     transform: translateY(-20px);
     filter: drop-shadow(0px 8px 16px rgba(0, 0, 0, 0.7));
+    position: relative;
   }
 
   #scoreboard-container.visible {
@@ -43,7 +41,6 @@
     transform: translateY(0);
   }
 
-  /* Badge superiore (LIVE e Minuto/Stato) */
   .status-badge {
     background: var(--red);
     color: #fff;
@@ -57,7 +54,6 @@
     animation: pulse 2s infinite;
   }
 
-  /* Barra principale dei team e punteggio */
   .main-board {
     display: flex;
     background: var(--surface);
@@ -65,6 +61,7 @@
     border-radius: 12px;
     overflow: hidden;
     height: 60px;
+    z-index: 2;
   }
 
   .team {
@@ -94,14 +91,8 @@
     transition: all 0.3s ease;
   }
 
-  /* Animazione al cambio di punteggio */
-  .score-box.goal {
-    transform: scale(1.1);
-    background: #fffff;
-    color: var(--green);
-  }
+  .score-box.goal { transform: scale(1.1); background: #ffffff; color: var(--green); }
 
-  /* Piccoli dettagli: Gironi o Note */
   .info-bar {
     background: rgba(20, 20, 23, 0.9);
     border: 1px solid var(--border);
@@ -112,6 +103,30 @@
     color: #a0a0ab;
     font-weight: 600;
     text-transform: uppercase;
+    z-index: 1;
+  }
+
+  /* BANNER DINAMICO PER GLI EVENTI (Preset) */
+  #event-banner {
+    position: absolute;
+    top: 90px; /* Sotto la scoreboard */
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px;
+    letter-spacing: 1px;
+    padding: 6px 30px;
+    border-radius: 8px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateY(-30px) scale(0.9);
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 0;
+  }
+
+  #event-banner.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 
   @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
@@ -129,14 +144,16 @@
     <div class="team right" id="teamB">SQUADRA B</div>
   </div>
   <div class="info-bar" id="match-info">GIRONE A</div>
+  
+  <div id="event-banner">TESTO EVENTO</div>
 </div>
 
 <script>
-  // Stesso endpoint della tua webapp
-  const API_URL = "https://script.google.com/macros/s/AKfycbxnlj1Hdg_d0xgmLVxUr8EWcqKokhB2ltSbUy3ANWcikFbM2Q11SaDHBQgGCF4hgVI/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbwZ4xDW77psti5npx53UaKu614s5vgXlvy6Uqxk6pWKv8DR6KGcmYwMK8e5bKCKl9sL/exec";
   
   let currentGolA = -1;
   let currentGolB = -1;
+  let lastEventTriggered = ""; // Memoria dell'ultimo preset attivato
 
   async function fetchLiveMatch() {
     try {
@@ -144,17 +161,12 @@
       const data = await response.json();
       
       if (data.success && data.matches) {
-        // Cerca la prima partita segnata come "LIVE"
         const liveMatch = data.matches.find(m => m.status === 'LIVE');
-        
-        if (liveMatch) {
-          updateScoreboard(liveMatch);
-        } else {
-          hideScoreboard();
-        }
+        if (liveMatch) updateScoreboard(liveMatch);
+        else hideScoreboard();
       }
     } catch (error) {
-      console.error("Errore nel recupero dati per OBS:", error);
+      console.error("Errore fetch dati OBS:", error);
     }
   }
 
@@ -162,47 +174,58 @@
     const container = document.getElementById('scoreboard-container');
     const scoreBox = document.getElementById('score-box');
     
-    // Aggiorna i nomi
     document.getElementById('teamA').textContent = match.squadraA;
     document.getElementById('teamB').textContent = match.squadraB;
     
-    // Aggiorna info aggiuntive
     let infoTesto = ['A', 'B', 'C', 'D'].includes(match.girone) ? `GIRONE ${match.girone}` : match.girone;
     document.getElementById('match-info').textContent = infoTesto;
 
-    // Gestione punteggio e animazione gol
     let newGolA = parseInt(match.golA) || 0;
     let newGolB = parseInt(match.golB) || 0;
 
     if (currentGolA !== -1 && (newGolA !== currentGolA || newGolB !== currentGolB)) {
-      // È stato segnato un gol! Trigger animazione
       scoreBox.classList.add('goal');
       setTimeout(() => scoreBox.classList.remove('goal'), 500);
     }
 
     document.getElementById('scoreA').textContent = newGolA;
     document.getElementById('scoreB').textContent = newGolB;
-    
-    currentGolA = newGolA;
-    currentGolB = newGolB;
+    currentGolA = newGolA; currentGolB = newGolB;
 
-    // Mostra il tabellone
+    // MAGIA DEGLI EVENTI
+    // Se è stato registrato un nuovo evento...
+    if (match.evento && match.evento !== lastEventTriggered) {
+      lastEventTriggered = match.evento;
+      
+      // Estraiamo TESTO | SFONDO | COLORE
+      const parts = match.evento.split('|');
+      if (parts.length >= 3) {
+        const banner = document.getElementById('event-banner');
+        banner.textContent = parts[0];
+        banner.style.backgroundColor = parts[1];
+        banner.style.color = parts[2];
+        
+        // Animazione in entrata
+        banner.classList.add('show');
+
+        // Scompare da solo dopo 8 secondi
+        setTimeout(() => {
+          banner.classList.remove('show');
+        }, 8000);
+      }
+    }
+
     container.classList.add('visible');
   }
 
   function hideScoreboard() {
-    const container = document.getElementById('scoreboard-container');
-    container.classList.remove('visible');
-    // Resetta i punteggi interni per resettare l'animazione al prossimo live
-    currentGolA = -1; 
-    currentGolB = -1;
+    document.getElementById('scoreboard-container').classList.remove('visible');
+    currentGolA = -1; currentGolB = -1;
   }
 
-  // Esegui subito alla partenza
   fetchLiveMatch();
-
-  // Aggiorna i dati ogni 10 secondi (10000 millisecondi)
-  setInterval(fetchLiveMatch, 10000);
+  // Poll rapido per l'interattività live (ogni 3 secondi)
+  setInterval(fetchLiveMatch, 3000);
 </script>
 
 </body>
