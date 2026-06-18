@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OBS Overlay - Recchio League</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #d32f2f;       /* Rosso sportivo */
+    --surface: #141417;     /* Sfondo scuro */
+    --border: #2c2c35;      /* Bordi */
+    --text: #ffffff;        /* Testo */
+    --red: #ff1744;         /* Badge LIVE */
+  }
+
+  /* Sfondo trasparente per OBS */
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: transparent; 
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding-top: 40px; /* Distanza dal bordo superiore */
+    overflow: hidden;
+  }
+
+  /* Contenitore principale del tabellone */
+  #scoreboard-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0; /* Nascosto di default, appare se c'è una partita LIVE */
+    transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+    transform: translateY(-20px);
+    filter: drop-shadow(0px 8px 16px rgba(0, 0, 0, 0.7));
+  }
+
+  #scoreboard-container.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Badge superiore (LIVE e Minuto/Stato) */
+  .status-badge {
+    background: var(--red);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 4px 16px;
+    border-radius: 8px 8px 0 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    animation: pulse 2s infinite;
+  }
+
+  /* Barra principale dei team e punteggio */
+  .main-board {
+    display: flex;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    height: 60px;
+  }
+
+  .team {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 1px;
+    padding: 0 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 200px;
+  }
+
+  .team.left { text-align: right; justify-content: flex-end; }
+  .team.right { text-align: left; justify-content: flex-start; }
+
+  .score-box {
+    background: var(--green);
+    color: #fff;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 40px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+    transition: all 0.3s ease;
+  }
+
+  /* Animazione al cambio di punteggio */
+  .score-box.goal {
+    transform: scale(1.1);
+    background: #fffff;
+    color: var(--green);
+  }
+
+  /* Piccoli dettagli: Gironi o Note */
+  .info-bar {
+    background: rgba(20, 20, 23, 0.9);
+    border: 1px solid var(--border);
+    border-top: none;
+    padding: 4px 15px;
+    border-radius: 0 0 8px 8px;
+    font-size: 12px;
+    color: #a0a0ab;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div id="scoreboard-container">
+  <div class="status-badge" id="match-status">🔴 LIVE</div>
+  <div class="main-board">
+    <div class="team left" id="teamA">SQUADRA A</div>
+    <div class="score-box" id="score-box">
+      <span id="scoreA">0</span><span style="margin: 0 8px;">-</span><span id="scoreB">0</span>
+    </div>
+    <div class="team right" id="teamB">SQUADRA B</div>
+  </div>
+  <div class="info-bar" id="match-info">GIRONE A</div>
+</div>
+
+<script>
+  // Stesso endpoint della tua webapp
+  const API_URL = "https://script.google.com/macros/s/AKfycbxnlj1Hdg_d0xgmLVxUr8EWcqKokhB2ltSbUy3ANWcikFbM2Q11SaDHBQgGCF4hgVI/exec";
+  
+  let currentGolA = -1;
+  let currentGolB = -1;
+
+  async function fetchLiveMatch() {
+    try {
+      const response = await fetch(API_URL + "?action=getAllMatches");
+      const data = await response.json();
+      
+      if (data.success && data.matches) {
+        // Cerca la prima partita segnata come "LIVE"
+        const liveMatch = data.matches.find(m => m.status === 'LIVE');
+        
+        if (liveMatch) {
+          updateScoreboard(liveMatch);
+        } else {
+          hideScoreboard();
+        }
+      }
+    } catch (error) {
+      console.error("Errore nel recupero dati per OBS:", error);
+    }
+  }
+
+  function updateScoreboard(match) {
+    const container = document.getElementById('scoreboard-container');
+    const scoreBox = document.getElementById('score-box');
+    
+    // Aggiorna i nomi
+    document.getElementById('teamA').textContent = match.squadraA;
+    document.getElementById('teamB').textContent = match.squadraB;
+    
+    // Aggiorna info aggiuntive
+    let infoTesto = ['A', 'B', 'C', 'D'].includes(match.girone) ? `GIRONE ${match.girone}` : match.girone;
+    document.getElementById('match-info').textContent = infoTesto;
+
+    // Gestione punteggio e animazione gol
+    let newGolA = parseInt(match.golA) || 0;
+    let newGolB = parseInt(match.golB) || 0;
+
+    if (currentGolA !== -1 && (newGolA !== currentGolA || newGolB !== currentGolB)) {
+      // È stato segnato un gol! Trigger animazione
+      scoreBox.classList.add('goal');
+      setTimeout(() => scoreBox.classList.remove('goal'), 500);
+    }
+
+    document.getElementById('scoreA').textContent = newGolA;
+    document.getElementById('scoreB').textContent = newGolB;
+    
+    currentGolA = newGolA;
+    currentGolB = newGolB;
+
+    // Mostra il tabellone
+    container.classList.add('visible');
+  }
+
+  function hideScoreboard() {
+    const container = document.getElementById('scoreboard-container');
+    container.classList.remove('visible');
+    // Resetta i punteggi interni per resettare l'animazione al prossimo live
+    currentGolA = -1; 
+    currentGolB = -1;
+  }
+
+  // Esegui subito alla partenza
+  fetchLiveMatch();
+
+  // Aggiorna i dati ogni 10 secondi (10000 millisecondi)
+  setInterval(fetchLiveMatch, 10000);
+</script>
+
+</body>
+</html>
