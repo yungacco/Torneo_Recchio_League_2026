@@ -7,18 +7,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --green: #d32f2f;       /* ACCENTO PRINCIPALE: Rosso sportivo per bottoni, tab attive e punteggi */
-    --green-dark: #b71c1c;  
-    --yellow: #d4af37;      /* ACCENTO SECONDARIO: Oro per note e fasi finali */
-    --red: #ff1744;         /* LIVE: Rosso acceso per il badge lampeggiante */
-    
-    --bg: #0a0a0c;          /* SFONDO GENERALE: Nero/Antracite molto scuro */
-    --surface: #141417;     /* Superfici intermedie: Grigio scurissimo */
-    --card: #1c1c22;        /* Schede partite e gironi: Grigio scuro */
-    
-    --border: #2c2c35;      /* Bordi e linee: Grigio medio/scuro neutro */
-    --text: #ffffff;        /* Testo principale: Bianco puro per risaltare sullo scuro */
-    --muted: #a0a0ab;       /* Testi secondari e Tab inattive: Grigio chiaro neutro */
+    --green: #d32f2f;
+    --green-dark: #b71c1c;
+    --yellow: #d4af37;
+    --red: #ff1744;
+    --bg: #0a0a0c;
+    --surface: #141417;
+    --card: #1c1c22;
+    --border: #2c2c35;
+    --text: #ffffff;
+    --muted: #a0a0ab;
   }
   
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -90,6 +88,11 @@
   .score-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
   .score-row .team-label { flex: 1; text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); }
   .score-input { width: 70px !important; text-align: center; font-family: 'Bebas Neue', sans-serif; font-size: 36px !important; padding: 10px 8px !important; background: #0d0d11 !important; }
+
+  /* Griglia Pulsanti OBS */
+  .obs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 30px; }
+  .obs-btn { background: var(--c); color: var(--txt); padding: 12px 6px; border: none; border-radius: 8px; font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1px; cursor: pointer; display: flex; align-items: center; justify-content: center; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.1s;}
+  .obs-btn:active { transform: scale(0.95); }
 
   .loading { display: flex; flex-direction: column; align-items: center; min-height: 200px; color: var(--muted); padding-top: 50px; }
   .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px;}
@@ -186,13 +189,24 @@
   </div>
 
   <button class="btn btn-primary" onclick="submitResult()" id="submitBtn">📤 SALVA RISULTATO</button>
+
+  <div class="section-title" style="margin-top: 35px;">🔥 AZIONI RAPIDE OBS (Popup in Live)</div>
+  <div class="obs-grid">
+    <button class="obs-btn" style="--c: #d4af37; --txt: #000;" onclick="triggerOBSEvent('🎯 RIGORE PRESIDENZIALE', '#d4af37', '#000000')">RIGORE</button>
+    <button class="obs-btn" style="--c: #2196F3; --txt: #fff;" onclick="triggerOBSEvent('📺 CONTROLLO VAR IN CORSO', '#2196F3', '#ffffff')">VAR</button>
+    <button class="obs-btn" style="--c: #f44336; --txt: #fff;" onclick="triggerOBSEvent('🟥 CARTELLINO ROSSO', '#f44336', '#ffffff')">ROSSO</button>
+    <button class="obs-btn" style="--c: #ffeb3b; --txt: #000;" onclick="triggerOBSEvent('🟨 CARTELLINO GIALLO', '#ffeb3b', '#000000')">GIALLO</button>
+    <button class="obs-btn" style="--c: #4caf50; --txt: #fff;" onclick="triggerOBSEvent('⏱️ TIME OUT CHIAMATO', '#4caf50', '#ffffff')">TIME OUT</button>
+    <button class="obs-btn" style="--c: #9c27b0; --txt: #fff;" onclick="triggerOBSEvent('🔥 GOL CLAMOROSO!', '#9c27b0', '#ffffff')">GOL PAZZESCO</button>
+    <button class="obs-btn" style="--c: #ff9800; --txt: #000;" onclick="triggerOBSEvent('🔄 CAMBIO GIOCATORE', '#ff9800', '#000000')">CAMBIO</button>
+    <button class="obs-btn" style="--c: #00bcd4; --txt: #000;" onclick="triggerOBSEvent('❄️ PARTITA CONGELATA', '#00bcd4', '#000000')">FREEZE</button>
+    <button class="obs-btn" style="--c: #e91e63; --txt: #fff;" onclick="triggerOBSEvent('🚑 GIOCO FERMO: INFORTUNIO', '#e91e63', '#ffffff')">INFORTUNIO</button>
+    <button class="obs-btn" style="--c: #607d8b; --txt: #fff;" onclick="triggerOBSEvent('⏳ TEMPO DI RECUPERO', '#607d8b', '#ffffff')">RECUPERO</button>
+  </div>
 </div>
 
 <script>
-// ==========================================
-// IMPORTANTE: INSERISCI QUI IL LINK DEL TUO SCRIPT GOOGLE!
-const API_URL = "https://script.google.com/macros/s/AKfycbxnlj1Hdg_d0xgmLVxUr8EWcqKokhB2ltSbUy3ANWcikFbM2Q11SaDHBQgGCF4hgVI/exec";
-// ==========================================
+const API_URL = "https://script.google.com/macros/s/AKfycbwZ4xDW77psti5npx53UaKu614s5vgXlvy6Uqxk6pWKv8DR6KGcmYwMK8e5bKCKl9sL/exec";
 
 let allMatches = [];      
 let uniqueDates = [];     
@@ -374,7 +388,6 @@ function renderCurrentDay() {
     let badgeBorder = isGroup ? "var(--border)" : "var(--yellow)";
     let gironeBadge = `<span style="background:var(--surface); border:1px solid ${badgeBorder}; font-size:10px; padding:3px 8px; border-radius:4px; color:${badgeColor}; font-weight:bold;">${badgeText}</span>`;
     
-    // Mostra l'orario o lo stato
     let timeDisplay = `<span>🕒 ${m.orario || 'TBD'}</span>`;
     if (isLive) timeDisplay = `<span class="live-badge">🔴 LIVE</span>`;
     else if (isTerminata) timeDisplay = `<span style="color:var(--muted);">✅ Finita</span>`;
@@ -549,7 +562,8 @@ function submitResult() {
     golB: document.getElementById('scoreB').value,
     marcatoriA: document.getElementById('marcatoriA').value.trim(), 
     marcatoriB: document.getElementById('marcatoriB').value.trim(), 
-    note: document.getElementById('notePartita').value.trim()
+    note: document.getElementById('notePartita').value.trim(),
+    evento: currentMatch.evento || "" // Mantiene l'ultimo evento inviato
   };
 
   fetch(API_URL, {
@@ -566,6 +580,41 @@ function submitResult() {
   .catch(err => {
     btn.disabled = false; btn.textContent = '📤 SALVA RISULTATO'; showToast('❌ Errore di connessione', true);
   });
+}
+
+// LA NUOVA FUNZIONE PER LANCIARE ANIMAZIONI SU OBS!
+function triggerOBSEvent(testo, bgColor, textColor) {
+  if (!currentMatch) return;
+  
+  // Creiamo una stringa speciale: TESTO|SFONDO|COLORE|TIMESTAMP
+  const stringaEvento = testo + "|" + bgColor + "|" + textColor + "|" + Date.now();
+  currentMatch.evento = stringaEvento; // Aggiorna localmente
+
+  const payload = {
+    id: currentMatch.id, 
+    pin: adminPin, 
+    status: document.getElementById('matchStatus').value,
+    golA: document.getElementById('scoreA').value, 
+    golB: document.getElementById('scoreB').value,
+    marcatoriA: document.getElementById('marcatoriA').value.trim(), 
+    marcatoriB: document.getElementById('marcatoriB').value.trim(), 
+    note: document.getElementById('notePartita').value.trim(),
+    evento: stringaEvento // INVIA LA STRINGA OBS
+  };
+
+  showToast("⏳ Lancio in OBS...");
+
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.success) showToast("✅ Animazione inviata in live!"); 
+    else showToast('❌ Errore: ' + data.errorMsg, true);
+  })
+  .catch(err => showToast('❌ Errore di connessione', true));
 }
 
 function showToast(msg, isError = false) {
