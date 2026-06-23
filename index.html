@@ -72,6 +72,11 @@
   tr:last-child td { border-bottom: none; }
   .pt { font-weight: bold; color: var(--green); font-size: 16px; }
 
+  /* NUOVE CLASSI PER COLORI CLASSIFICA */
+  tr.rank-green { background-color: rgba(46, 125, 50, 0.25); }   /* Verde (1-6) */
+  tr.rank-yellow { background-color: rgba(214, 175, 55, 0.2); }   /* Giallo (7-10) */
+  tr.rank-red { background-color: rgba(211, 47, 47, 0.2); }       /* Rosso (11+) */
+
   .history-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--muted); border-radius: 8px; padding: 12px; margin-bottom: 10px;}
   .history-date { font-size: 10px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between;}
   .history-score { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--text); }
@@ -434,11 +439,40 @@ function loadStandings() {
 function renderGironi(classifiche) {
   const container = document.getElementById('gironiContainer');
   container.innerHTML = '';
+  
+  // Calcoliamo quanti gironi sono effettivamente attivi/popolati
+  let activeGroups = ['A', 'B', 'C', 'D'].filter(g => classifiche[g] && classifiche[g].length > 0);
+
   ['A', 'B', 'C', 'D'].forEach(girone => {
     let list = classifiche[girone] || [];
-    let tableRows = list.length === 0 ? `<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:15px;">Nessuna squadra nel Girone ${girone}</td></tr>` 
-      : list.map((t, idx) => `<tr><td style="font-weight:600;">${idx + 1}. ${t.nome}</td><td class="pt">${t.punti}</td><td>${t.giocate}</td><td>${t.vinte}</td><td>${t.pareggiate}</td><td>${t.perse}</td></tr>`).join('');
-    container.innerHTML += `<div class="girone-box"><div class="girone-title">Girone ${girone}</div><div class="table-container"><table><thead><tr><th>Squadra</th><th>PT</th><th>G</th><th>V</th><th>P</th><th>S</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
+    
+    // Novità: Se il girone è completamente vuoto, lo saltiamo e non lo stampiamo
+    if (list.length === 0) return;
+
+    let tableRows = list.map((t, idx) => {
+      let pos = idx + 1;
+      let rowClass = "";
+      
+      // LOGICA COLORI IN CLASSIFICA
+      if (pos <= 6) rowClass = "rank-green";
+      else if (pos >= 7 && pos <= 10) rowClass = "rank-yellow";
+      else if (pos >= 11) rowClass = "rank-red";
+
+      return `
+      <tr class="${rowClass}">
+        <td style="font-weight:600;">${pos}. ${t.nome}</td>
+        <td class="pt">${t.punti}</td>
+        <td>${t.giocate}</td>
+        <td>${t.vinte}</td>
+        <td>${t.pareggiate}</td>
+        <td>${t.perse}</td>
+      </tr>`;
+    }).join('');
+    
+    // Novità: Se c'è un solo girone popolato (Girone Unico), diamo un titolo più professionale
+    let titleText = activeGroups.length === 1 ? "CLASSIFICA GENERALE" : `Girone ${girone}`;
+
+    container.innerHTML += `<div class="girone-box"><div class="girone-title">${titleText}</div><div class="table-container"><table><thead><tr><th>Squadra</th><th>PT</th><th>G</th><th>V</th><th>P</th><th>S</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
   });
 }
 
@@ -582,13 +616,11 @@ function submitResult() {
   });
 }
 
-// LA NUOVA FUNZIONE PER LANCIARE ANIMAZIONI SU OBS!
 function triggerOBSEvent(testo, bgColor, textColor) {
   if (!currentMatch) return;
   
-  // Creiamo una stringa speciale: TESTO|SFONDO|COLORE|TIMESTAMP
   const stringaEvento = testo + "|" + bgColor + "|" + textColor + "|" + Date.now();
-  currentMatch.evento = stringaEvento; // Aggiorna localmente
+  currentMatch.evento = stringaEvento; 
 
   const payload = {
     id: currentMatch.id, 
@@ -599,7 +631,7 @@ function triggerOBSEvent(testo, bgColor, textColor) {
     marcatoriA: document.getElementById('marcatoriA').value.trim(), 
     marcatoriB: document.getElementById('marcatoriB').value.trim(), 
     note: document.getElementById('notePartita').value.trim(),
-    evento: stringaEvento // INVIA LA STRINGA OBS
+    evento: stringaEvento 
   };
 
   showToast("⏳ Lancio in OBS...");
