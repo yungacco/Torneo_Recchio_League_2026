@@ -72,7 +72,7 @@
   tr:last-child td { border-bottom: none; }
   .pt { font-weight: bold; color: var(--green); font-size: 16px; }
 
-  /* NUOVE CLASSI PER COLORI CLASSIFICA */
+  /* COLORI CLASSIFICA GIRONE UNICO */
   tr.rank-green { background-color: rgba(46, 125, 50, 0.25); }   /* Verde (1-6) */
   tr.rank-yellow { background-color: rgba(214, 175, 55, 0.2); }   /* Giallo (7-10) */
   tr.rank-red { background-color: rgba(211, 47, 47, 0.2); }       /* Rosso (11+) */
@@ -290,10 +290,10 @@ function switchTab(screenId) {
       renderCurrentDay(); 
     } else if (screenId === 'classificaScreen') { 
       document.getElementById('tab-classifica').classList.add('active'); 
-      loadStandings(); 
+      loadStandings(); // Adesso è ISTANTANEO
     } else if (screenId === 'marcatoriScreen') {
       document.getElementById('tab-marcatori').classList.add('active'); 
-      renderMarcatoriClassifica(); 
+      renderMarcatoriClassifica(); // Adesso è ISTANTANEO
     }
   } else { 
     document.getElementById('mainTabs').style.display = 'none'; 
@@ -422,33 +422,79 @@ function renderCurrentDay() {
   }).join('');
 }
 
+// LOGICA CLASSIFICA E STORICO RISCRITTA: ORA È VELOCISSIMA ED ELABORA I DATI IN LOCALE!
 function loadStandings() {
-  document.getElementById('gironiContainer').innerHTML = `<div style="text-align:center; padding:20px;"><div class="spinner" style="margin: 0 auto;"></div></div>`;
-  document.getElementById('historyList').innerHTML = '';
-  renderFaseFinale();
+  let classifiche = {};
+  let history = [];
 
-  fetch(API_URL + "?action=getStandingsAndHistory")
-    .then(response => response.json())
-    .then(data => {
-      if(data.success) { renderGironi(data.classifiche); renderHistory(data.history); } 
-      else showToast("Errore calcolo classifiche", true);
-    })
-    .catch(err => showToast("Errore di connessione", true));
+  // Calcola tutto al volo sui dati scaricati
+  allMatches.forEach(m => {
+    let sqA = m.squadraA;
+    let sqB = m.squadraB;
+    let gA = m.golA;
+    let gB = m.golB;
+    let girone = m.girone || "A";
+
+    if (!sqA || !sqB) return;
+
+    let isGroupMatch = ['A', 'B', 'C', 'D'].includes(girone);
+
+    if (isGroupMatch) {
+      if (!classifiche[girone]) classifiche[girone] = {};
+      if (!classifiche[girone][sqA]) classifiche[girone][sqA] = { nome: sqA, punti: 0, giocate: 0, vinte: 0, pareggiate: 0, perse: 0 };
+      if (!classifiche[girone][sqB]) classifiche[girone][sqB] = { nome: sqB, punti: 0, giocate: 0, vinte: 0, pareggiate: 0, perse: 0 };
+
+      if (gA !== "" && gB !== "") {
+        let golA = parseInt(gA);
+        let golB = parseInt(gB);
+
+        classifiche[girone][sqA].giocate++;
+        classifiche[girone][sqB].giocate++;
+
+        if (golA > golB) {
+          classifiche[girone][sqA].punti += 3; classifiche[girone][sqA].vinte++;
+          classifiche[girone][sqB].perse++;
+        } else if (golB > golA) {
+          classifiche[girone][sqB].punti += 3; classifiche[girone][sqB].vinte++;
+          classifiche[girone][sqA].perse++;
+        } else {
+          classifiche[girone][sqA].punti += 1; classifiche[girone][sqA].pareggiate++;
+          classifiche[girone][sqB].punti += 1; classifiche[girone][sqB].pareggiate++;
+        }
+      }
+    }
+
+    if (gA !== "" && gB !== "") {
+      history.push(m);
+    }
+  });
+
+  // Ordina classifiche per punti
+  let formattedClassifiche = {};
+  Object.keys(classifiche).forEach(g => {
+    formattedClassifiche[g] = Object.values(classifiche[g]).sort((a, b) => b.punti - a.punti);
+  });
+
+  renderGironi(formattedClassifiche);
+  renderHistory(history.reverse());
+  renderFaseFinale();
 }
 
 function renderGironi(classifiche) {
   const container = document.getElementById('gironiContainer');
   container.innerHTML = '';
   
-  // Calcoliamo quanti gironi sono effettivamente attivi/popolati
-  let activeGroups = ['A', 'B', 'C', 'D'].filter(g => classifiche[g] && classifiche[g].length > 0);
+  // Trova solo i gironi che hanno almeno una squadra (così salta B, C e D se sono vuoti)
+  let activeGroups = Object.keys(classifiche).filter(g => classifiche[g].length > 0 && ['A', 'B', 'C', 'D'].includes(g));
 
-  ['A', 'B', 'C', 'D'].forEach(girone => {
-    let list = classifiche[girone] || [];
+  if (activeGroups.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:15px; color:var(--muted);">Nessuna squadra presente</div>`;
+    return;
+  }
+
+  activeGroups.forEach(girone => {
+    let list = classifiche[girone];
     
-    // Novità: Se il girone è completamente vuoto, lo saltiamo e non lo stampiamo
-    if (list.length === 0) return;
-
     let tableRows = list.map((t, idx) => {
       let pos = idx + 1;
       let rowClass = "";
@@ -469,7 +515,7 @@ function renderGironi(classifiche) {
       </tr>`;
     }).join('');
     
-    // Novità: Se c'è un solo girone popolato (Girone Unico), diamo un titolo più professionale
+    // Se c'è un solo girone popolato, diamo un titolo generale!
     let titleText = activeGroups.length === 1 ? "CLASSIFICA GENERALE" : `Girone ${girone}`;
 
     container.innerHTML += `<div class="girone-box"><div class="girone-title">${titleText}</div><div class="table-container"><table><thead><tr><th>Squadra</th><th>PT</th><th>G</th><th>V</th><th>P</th><th>S</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>`;
@@ -514,9 +560,9 @@ function renderHistory(history) {
     let isLive = h.status === 'LIVE';
     let badgeLive = isLive ? `<span class="live-badge">LIVE</span>` : '';
     
-    let scorersHtml = (h.marcA || h.marcB) ? `<div class="scorers-row" style="margin-top:8px;"><div class="scorer-left">${formatMarcatori(h.marcA, 'A')}</div><div class="scorer-right">${formatMarcatori(h.marcB, 'B')}</div></div>` : '';
+    let scorersHtml = (h.marcatoriA || h.marcatoriB) ? `<div class="scorers-row" style="margin-top:8px;"><div class="scorer-left">${formatMarcatori(h.marcatoriA, 'A')}</div><div class="scorer-right">${formatMarcatori(h.marcatoriB, 'B')}</div></div>` : '';
     let noteHtml = h.note ? `<div class="match-note" style="margin-top:8px;">📌 ${h.note.replace(/\n/g, '<br>')}</div>` : '';
-    return `<div class="history-card"><div class="history-date"><span>${badgeStr} | ${h.data} - Ore ${h.orario}</span>${badgeLive}</div><div class="history-score">${h.sqA} <span style="color:var(--green); margin:0 5px;">${h.gA} - ${h.gB}</span> ${h.sqB}</div>${scorersHtml}${noteHtml}</div>`;
+    return `<div class="history-card"><div class="history-date"><span>${badgeStr} | ${h.date} - Ore ${h.orario}</span>${badgeLive}</div><div class="history-score">${h.squadraA} <span style="color:var(--green); margin:0 5px;">${h.golA} - ${h.golB}</span> ${h.squadraB}</div>${scorersHtml}${noteHtml}</div>`;
   }).join('');
 }
 
@@ -597,7 +643,7 @@ function submitResult() {
     marcatoriA: document.getElementById('marcatoriA').value.trim(), 
     marcatoriB: document.getElementById('marcatoriB').value.trim(), 
     note: document.getElementById('notePartita').value.trim(),
-    evento: currentMatch.evento || "" // Mantiene l'ultimo evento inviato
+    evento: currentMatch.evento || "" 
   };
 
   fetch(API_URL, {
